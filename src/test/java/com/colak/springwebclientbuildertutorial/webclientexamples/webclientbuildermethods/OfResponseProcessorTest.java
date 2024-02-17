@@ -1,4 +1,4 @@
-package com.colak.springwebclientbuildertutorial.webclientexamples.webclientmethods;
+package com.colak.springwebclientbuildertutorial.webclientexamples.webclientbuildermethods;
 
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.client.WireMock;
@@ -9,18 +9,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.http.HttpStatusCode;
+import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import wiremock.org.eclipse.jetty.http.HttpStatus;
 
 /**
- * See <a href="https://mohosinmiah1610.medium.com/error-handling-with-webclient-in-spring-boot-e604733071e0">...</a>
+ * Create a filter using WebClient.builder().filter()
+ * See <a href="https://medium.com/@vigneshwaran4817/exceptional-handling-in-spring-boot-best-practices-for-seamless-error-management-b9024787cbc9">...</a>
  */
 @ExtendWith(WireMockExtension.class)
 @WireMockTest(httpPort = 8080)
 @Slf4j
-class OnStatusTest {
+class OfResponseProcessorTest {
 
     @Test
     void test(WireMockRuntimeInfo wmRuntimeInfo) {
@@ -29,27 +30,29 @@ class OnStatusTest {
                 .withStatus(HttpStatus.FORBIDDEN_403).withBody("Forbidden, WireMock!");
         WireMock.stubFor(WireMock.get("/").willReturn(responseDefinitionBuilder));
 
-        String baseUrl = "http://localhost:" + wmRuntimeInfo.getHttpPort();
-        WebClient webClient = WebClient.create(baseUrl);
-
         String expectedMessage = "Expected Message";
+        String baseUrl = "http://localhost:" + wmRuntimeInfo.getHttpPort();
+
+        WebClient webClient = WebClient.builder()
+                .baseUrl(baseUrl)
+                // This is the example
+                // Create a filter to do something according to HttpStatus codes
+                .filter(ExchangeFilterFunction.ofResponseProcessor(clientResponse -> {
+                    if (clientResponse.statusCode().is4xxClientError()) {
+                        return Mono.error(new RuntimeException(expectedMessage));
+                    }
+                    return Mono.just(clientResponse);
+                }))
+                .build();
+
+
         try {
             webClient.get()
                     .retrieve()
-                    // This is the example
-                    // Do something according to HttpStatus codes
-                    // HttpStatusCode::is4xxClientError , is5xxServerError can also be used
-                    .onStatus(HttpStatusCode::isError,
-                            clientResponse ->
-                                    switch (clientResponse.statusCode().value()) {
-                                        case 400 -> Mono.error(new RuntimeException("400"));
-                                        default -> Mono.error(new RuntimeException(expectedMessage));
-                                    })
                     .bodyToMono(String.class)
                     .block();
         } catch (RuntimeException exception) {
             Assertions.assertEquals(expectedMessage, exception.getMessage());
         }
     }
-
 }

@@ -30,12 +30,13 @@ public class EnhancedWebClientBuilder {
     }
 
     public WebClient build() {
-        return this.builder.filter(ExchangeFilterFunction.ofResponseProcessor(clientResponse -> {
-            if (clientResponse.statusCode().is5xxServerError()) {
-                return clientResponse.createError();
-            }
-            return Mono.just(clientResponse);
-        })).build();
+        return this.builder
+                .filter(ExchangeFilterFunction.ofResponseProcessor(clientResponse -> {
+                    if (clientResponse.statusCode().is5xxServerError()) {
+                        return clientResponse.createError();
+                    }
+                    return Mono.just(clientResponse);
+                })).build();
     }
 
     // retry policy is a simple count based algorithm with backoff behaviour
