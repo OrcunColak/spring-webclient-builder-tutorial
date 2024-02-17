@@ -24,7 +24,7 @@ class OnStatusTest {
 
     @Test
     void testOnStatusTest(WireMockRuntimeInfo wmRuntimeInfo) {
-        String expectedMessage = "Client error";
+        // Wiremock setup
         ResponseDefinitionBuilder responseDefinitionBuilder = WireMock.aResponse()
                 .withStatus(HttpStatus.FORBIDDEN_403).withBody("Forbidden, WireMock!");
         WireMock.stubFor(WireMock.get("/").willReturn(responseDefinitionBuilder));
@@ -32,10 +32,17 @@ class OnStatusTest {
         String baseUrl = "http://localhost:" + wmRuntimeInfo.getHttpPort();
         WebClient webClient = WebClient.create(baseUrl);
 
+        String expectedMessage = "Client error";
         try {
             webClient.get()
                     .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, clientResponse -> Mono.error(new RuntimeException(expectedMessage)))
+                    // HttpStatusCode::is4xxClientError , is5xxServerError can also be used
+                    .onStatus(HttpStatusCode::isError,
+                            clientResponse ->
+                                    switch (clientResponse.statusCode().value()) {
+                                        case 400 -> Mono.error(new RuntimeException("400"));
+                                        default -> Mono.error(new RuntimeException(expectedMessage));
+                                    })
                     .bodyToMono(String.class)
                     .block();
         } catch (RuntimeException exception) {
