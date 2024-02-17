@@ -17,10 +17,13 @@ import reactor.util.retry.Retry;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Web client with resiliency patterns
+ */
 public class EnhancedWebClientBuilder {
     private final WebClient.Builder builder;
 
-    EnhancedWebClientBuilder(final Duration timeout, final String baseUrl) {
+    EnhancedWebClientBuilder(Duration timeout, String baseUrl) {
         this.builder = WebClient.builder()
                 .baseUrl(baseUrl)
                 .clientConnector(getConnector(timeout));
@@ -36,7 +39,7 @@ public class EnhancedWebClientBuilder {
     }
 
     // retry policy is a simple count based algorithm with backoff behaviour
-    public EnhancedWebClientBuilder withRetry(final byte attempts, final Duration minBackoff, final double jitter) {
+    public EnhancedWebClientBuilder withRetry(byte attempts, Duration minBackoff, double jitter) {
         final var retry = Retry
                 // exponential backoff. The first backoff starts with minBackoff
                 .backoff(attempts, minBackoff)
@@ -48,10 +51,10 @@ public class EnhancedWebClientBuilder {
     }
 
     // circuit breaker layer takes place before retry policy
-    public EnhancedWebClientBuilder withCircuitBreaker(final float failureRateThreshold,
-                                                       final Duration waitDurationInOpenState,
-                                                       final int permittedNumberOfCallsInHalfOpenState,
-                                                       final int slidingWindowSize) {
+    public EnhancedWebClientBuilder withCircuitBreaker(float failureRateThreshold,
+                                                       Duration waitDurationInOpenState,
+                                                       int permittedNumberOfCallsInHalfOpenState,
+                                                       int slidingWindowSize) {
 
         CircuitBreakerConfig circuitBreakerConfig = CircuitBreakerConfig.custom()
                 .failureRateThreshold(failureRateThreshold)
@@ -60,7 +63,7 @@ public class EnhancedWebClientBuilder {
                 .slidingWindowSize(slidingWindowSize)
                 .build();
 
-        final var circuitBreaker = CircuitBreaker.of("web client circuit breaker", circuitBreakerConfig);
+        CircuitBreaker circuitBreaker = CircuitBreaker.of("web client circuit breaker", circuitBreakerConfig);
         this.builder.filter(((request, next) ->
                 next.exchange(request).transform(CircuitBreakerOperator.of(circuitBreaker))
         ));
@@ -68,7 +71,7 @@ public class EnhancedWebClientBuilder {
     }
 
     private static ClientHttpConnector getConnector(Duration timeout) {
-        final var httpClient = HttpClient.create()
+        HttpClient httpClient = HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) timeout.toMillis())
                 .responseTimeout(timeout)
                 .doOnConnected(conn ->
