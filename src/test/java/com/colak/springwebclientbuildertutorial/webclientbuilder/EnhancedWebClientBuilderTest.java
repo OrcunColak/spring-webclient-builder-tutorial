@@ -2,6 +2,7 @@ package com.colak.springwebclientbuildertutorial.webclientbuilder;
 
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
@@ -11,15 +12,16 @@ import org.springframework.web.reactive.function.client.WebClient;
 import java.time.Duration;
 
 @ExtendWith(WireMockExtension.class)
-@WireMockTest(httpPort = 8080)
+@WireMockTest
 @Slf4j
 class EnhancedWebClientBuilderTest {
 
     @Test
-    void testWithRetry() {
+    void testWithRetry(WireMockRuntimeInfo wmRuntimeInfo) {
         WireMock.stubFor(WireMock.get("/").willReturn(WireMock.serverError()));
 
-        WebClient webClient = new EnhancedWebClientBuilder(Duration.ofMillis(100), "http://localhost:8080")
+        String baseUrl = "http://localhost:" + wmRuntimeInfo.getHttpPort();
+        WebClient webClient = new EnhancedWebClientBuilder(Duration.ofMillis(100), baseUrl)
                 .withCircuitBreaker(50, Duration.ofMillis(200), 1, 2)
                 .withRetry((byte) 2, Duration.ofMillis(50), 0.5)
                 .build();

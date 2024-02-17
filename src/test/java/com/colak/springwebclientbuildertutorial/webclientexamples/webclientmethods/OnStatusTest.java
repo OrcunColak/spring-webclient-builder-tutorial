@@ -18,7 +18,7 @@ import wiremock.org.eclipse.jetty.http.HttpStatus;
  * See <a href="https://mohosinmiah1610.medium.com/error-handling-with-webclient-in-spring-boot-e604733071e0">...</a>
  */
 @ExtendWith(WireMockExtension.class)
-@WireMockTest(httpPort = 8080)
+@WireMockTest
 @Slf4j
 class OnStatusTest {
 

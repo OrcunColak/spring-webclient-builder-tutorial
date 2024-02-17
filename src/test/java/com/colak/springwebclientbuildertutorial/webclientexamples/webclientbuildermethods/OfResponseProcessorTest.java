@@ -19,7 +19,7 @@ import wiremock.org.eclipse.jetty.http.HttpStatus;
  * See <a href="https://medium.com/@vigneshwaran4817/exceptional-handling-in-spring-boot-best-practices-for-seamless-error-management-b9024787cbc9">...</a>
  */
 @ExtendWith(WireMockExtension.class)
-@WireMockTest(httpPort = 8080)
+@WireMockTest
 @Slf4j
 class OfResponseProcessorTest {
 
