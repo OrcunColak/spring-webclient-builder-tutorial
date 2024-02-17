@@ -1,4 +1,4 @@
-package com.colak.springwebclientbuildertutorial.webclientexamples;
+package com.colak.springwebclientbuildertutorial.webclientexamples.mono;
 
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.client.WireMock;
@@ -20,10 +20,10 @@ import wiremock.org.eclipse.jetty.http.HttpStatus;
 @ExtendWith(WireMockExtension.class)
 @WireMockTest(httpPort = 8080)
 @Slf4j
-class OnStatusTest {
+class OnErrorMapTest {
 
     @Test
-    void testOnStatusTest(WireMockRuntimeInfo wmRuntimeInfo) {
+    void test(WireMockRuntimeInfo wmRuntimeInfo) {
         // Wiremock setup
         ResponseDefinitionBuilder responseDefinitionBuilder = WireMock.aResponse()
                 .withStatus(HttpStatus.FORBIDDEN_403).withBody("Forbidden, WireMock!");
@@ -36,14 +36,17 @@ class OnStatusTest {
         try {
             webClient.get()
                     .retrieve()
-                    // HttpStatusCode::is4xxClientError , is5xxServerError can also be used
+                    // Convert FORBIDDEN_403 from WireMock to exception
                     .onStatus(HttpStatusCode::isError,
                             clientResponse ->
                                     switch (clientResponse.statusCode().value()) {
                                         case 400 -> Mono.error(new RuntimeException("400"));
-                                        default -> Mono.error(new RuntimeException(expectedMessage));
+                                        default -> Mono.error(new RuntimeException("Mono error"));
                                     })
                     .bodyToMono(String.class)
+                    // This is the example
+                    // Convert exception from onStatus to another exception with Mono
+                    .onErrorMap(Exception.class, exception -> new RuntimeException(expectedMessage, exception))
                     .block();
         } catch (RuntimeException exception) {
             Assertions.assertEquals(expectedMessage, exception.getMessage());
