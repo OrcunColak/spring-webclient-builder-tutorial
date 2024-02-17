@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatusCode;
@@ -19,18 +18,21 @@ import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.retry.backoff.FixedBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import wiremock.org.eclipse.jetty.http.HttpStatus;
 
-import static java.lang.StringTemplate.STR;
-
 /**
  * Instead of using Reactor retry we can also use Spring Boot Retry
  * See <a href="https://medium.com/@dixitsatish34/system-resiliencey-webclient-retry-in-spring-boot-0729085c7500">...</a>
  */
-@SpringBootTest
+
+// No need to load entire application context with @SpringBootTest
+@ExtendWith(SpringExtension.class)
+@ContextConfiguration
 @ExtendWith(WireMockExtension.class)
 @WireMockTest
 @Slf4j
@@ -38,6 +40,7 @@ class SpringRetryTest {
     @Autowired
     private RetryTemplate retryTemplate;
 
+    // The class needs to be "static class"
     @Configuration
     @EnableRetry
     static class RetryConfig {
