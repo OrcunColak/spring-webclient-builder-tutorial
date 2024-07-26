@@ -1,4 +1,4 @@
-package com.colak.springwebclientbuildertutorial.webclientbuilder;
+package com.colak.springtutorial.webclientbuilder;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
@@ -12,9 +12,11 @@ import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.resources.ConnectionProvider;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -37,6 +39,16 @@ public class EnhancedWebClientBuilder {
                     }
                     return Mono.just(clientResponse);
                 })).build();
+    }
+
+    public EnhancedWebClientBuilder withHeader(Map<String, String> headerMap) {
+        // Enable gzip compression to reduce the payload size and improve response times for large responses.
+        // .defaultHeader("Accept-Encoding", "gzip")
+        // .defaultHeader("Content-Type", "application/json")
+        for (Map.Entry<String, String> entry : headerMap.entrySet()) {
+            builder.defaultHeader(entry.getKey(), entry.getValue());
+        }
+        return this;
     }
 
     // retry policy is a simple count based algorithm with backoff behaviour
@@ -72,7 +84,15 @@ public class EnhancedWebClientBuilder {
     }
 
     private static ClientHttpConnector getConnector(Duration timeout) {
-        HttpClient httpClient = HttpClient.create()
+        // Create pool
+        ConnectionProvider connectionProvider = ConnectionProvider.builder("custom")
+                .maxConnections(100)
+                .pendingAcquireMaxCount(500)
+                .maxIdleTime(Duration.ofSeconds(20))
+                .maxLifeTime(Duration.ofSeconds(60))
+                .build();
+
+        HttpClient httpClient = HttpClient.create(connectionProvider)
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) timeout.toMillis())
                 .responseTimeout(timeout)
                 .doOnConnected(conn ->
